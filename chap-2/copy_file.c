@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #define BUF_SIZE 256 
 #define MAX_FILEPATH 256
 #define OUT_FILE "out.txt"
@@ -11,8 +13,8 @@ void copy_file() {
     scanf("%s",filename);
     int input_file_descripter=open(filename,O_RDONLY,0);
     if(input_file_descripter==-1){
-        printf("error in reading the file.");
-        return;
+        perror("Error opening source file");//system generated error prefix
+        exit(EXIT_FAILURE);//this exist status will be accessible to others
     }
     printf("input file descriptor: %d\n",input_file_descripter);
 
@@ -24,14 +26,22 @@ void copy_file() {
     if(output_file_descripter==-1){
         output_file_descripter=creat(OUT_FILE,0666);
         if(output_file_descripter==-1){
-            printf("error in opening output file: %d\n",output_file_descripter);
-            return;
+            perror("Error opening/creating destination file");
+            close(input_file_descripter);
+            exit(EXIT_FAILURE);
         }
     }
     printf("output file descripter: %d\n",output_file_descripter);
-
-    while((n=read(input_file_descripter,buf,BUF_SIZE))>0)
-        write(output_file_descripter,buf,n);
+    int m;
+    while((n=read(input_file_descripter,buf,BUF_SIZE))>0){
+        m=write(output_file_descripter,buf,n);
+        if(m!=n){
+            perror("Error writing to destination file");
+            close(input_file_descripter);
+            close(output_file_descripter);
+            exit(EXIT_FAILURE);
+        }
+    }
     return;   
 }
 
@@ -39,3 +49,6 @@ int main() {
     copy_file();
     return 0;
 }
+
+//trace system calls 
+//strace ./copy_file 
